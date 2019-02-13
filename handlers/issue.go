@@ -1,13 +1,11 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"context"
-//	"io/ioutil"
-//	"net/http"
-//	"regexp"
-//	"strings"
+	"regexp"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/google/go-github/github"
@@ -20,7 +18,7 @@ func (s *Server) handleIssueEvent(body []byte) {
 
 }
 
-func (s *Server) handleIssueCommentEvent(body []byte, client * github.Client) {
+func (s *Server) handleIssueCommentEvent(body []byte, client *github.Client) {
 	glog.Infof("Received an IssueComment Event")
 
 	var prc github.IssueCommentEvent
@@ -29,78 +27,42 @@ func (s *Server) handleIssueCommentEvent(body []byte, client * github.Client) {
 		glog.Errorf("fail to unmarshal: %v", err)
 	}
 	glog.Infof("prc: %v", prc)
-/*	comment := *prc.Comment.Body
 
-	 //https://github.com/islinwb/test/pull/1
-	prID := strings.SplitAfter(prc.Issue.PullRequestLinks.GetHTMLURL(), "github.com/")[1]
-	 //https://github.com/islinwb/test/pull/1.patch
-	 //From <commit ID> MON ...
-	patchURL := prc.Issue.PullRequestLinks.GetPatchURL()
-	resp, err := http.Get(patchURL)
-	if err != nil {
-		fmt.Println(err)
-	}
+	owner := *prc.Repo.Owner.Login
 
-	resp1, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	patchDetail := string(resp1)
-	reg := regexp.MustCompile(`From [A-Za-z0-9]{40}`)
-	commitIDstr := reg.FindString(patchDetail)
-	commitID := strings.TrimPrefix(commitIDstr, "From ")
-
-	var info map[string]string
-	info["PR_ID"] = prID
-	info["Commit_ID"] = commitID
-
-	if labelReg.MatchString(comment) {
-		labelSlice := strings.Split(comment, " ")
-		if len(labelSlice) > 0 {
-		}
-	}
-	
-	if retestReg.MatchString(comment) {
-		// "/retest"
-		s.SendToCI(info)
-	} else if testReg.MatchString(comment) {
-		// TODO: trigger particular job(s)
-		s.SendToCircleCI(body)
-	}*/ 
-	
 	ctx := context.Background()
-
-	list,_,err := client.Repositories.ListCollaborators(ctx,"swx457056","test-ci-bot",nil)
-	if err != nil{
-		glog.Fatal("Cannot List the Collaborators",err)
-	}
-	fmt.Println("list",list)
-
-	assign,_,err := client.Repositories.IsCollaborator(ctx, "swx457056", "test-ci-bot", "sids-b")
-	fmt.Println("assign",assign)
+	user := prc.Sender.Login
+	list, _, err := client.Repositories.ListCollaborators(ctx, owner, *prc.Repo.Name, nil)
+	fmt.Println("list", list)
 	if err != nil {
-		glog.Fatal("Not the collaborator",err)
-
+		glog.Fatal("Cannot List the Collaborators", err)
 	}
 
-//	var assignees github.IssueRequest
-//	get := assignees.GetAssignees()
-	get:=make([]string,0)
-	get = append(get,"sids-b")
-	fmt.Println("***********get***************",get)
+	comment := *prc.Comment.Body
 
+	assignees := strings.TrimPrefix(comment, "/assign @")
+	assign, _, err := client.Repositories.IsCollaborator(ctx, owner, *prc.Repo.Name, *user)
+	if err != nil {
+		glog.Fatal("Not the collaborator", err)
+
+	}
+	reg := regexp.MustCompile("(?mi)^/(un)?assign(( @?[-\\w]+?)*)\\s*$")
+	comm := reg.MatchString(comment)
+	get := make([]string, 0)
+	get = append(get, assignees)
 
 	if assign {
-		 fmt.Println("Add Assignee")
+		if comm == true {
+			issue, _, err := client.Issues.AddAssignees(ctx, *prc.Repo.Owner.Login, *prc.Repo.Name, *prc.Issue.Number, get)
+			if err != nil {
+				glog.Fatal("Cannot Add Assignees", err)
+			}
+			if issue != nil {
+				fmt.Println("Assignee added successfully")
+			}
 
-			issue,_,err := client.Issues.AddAssignees(ctx,"swx457056", "test-ci-bot",1,get)
-			fmt.Println("err",err)
-			fmt.Println("issue",issue)
-		
-
+		}
 
 	}
-
 
 }

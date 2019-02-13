@@ -1,0 +1,56 @@
+# Plugin repository whitelist.
+# Keys: Full repo name: "org/repo".
+# Values: List of plugins to run against the repo.
+---
+triggers:
+  - repos:
+      - test-ci-bot
+    trusted_org: test-ci-bot
+    only_org_members: true
+  - repos:
+      - test-ci-bot
+    trusted_org: test-ci-bot
+
+owners:
+  mdyamlrepos:
+    - swx457056
+
+config_updater:
+  maps:
+    ci-bot-test/ci-bot/config.json:
+      name: config
+    ci-bot-test/ci-bot/plugins.yaml:
+      name: plugins
+
+welcome:
+  - repos:
+      -test-ci-bot
+    message_template: "Welcome @{{.AuthorLogin}}! It looks like this is your first PR to {{.Org}}/{{.Repo}} 🎉🎉"
+
+
+plugins:
+  # Enable the following for any bazelbuild repo (rules_k8s, rules_docker) that sends prow webhooks
+  # Repos that do not send prow webhooks will see no effect.
+  test-ci-bot:
+ #   - approve  # Allow OWNERS to /approve
+    - assign  # Allow /assign and /cc
+ #   - blunderbuss  # Auto-assign people
+ #  - cat # /meow replies with cat pictures
+ #   - dog # /bark replies with dog pictures
+ #   - help  # Support /help and /good-first-issue
+ #   - hold  # Support /hold to delay merge
+ #   - lgtm  # Allow /lgtm
+ #   - lifecycle  # Allow /lifecycle stale
+ #   - override
+ #   - size  # Auto-label size of PR
+  #  - trigger  # Allow people to configure CI jobs to /test
+  #  - verify-owners # Validates OWNERS file changes in PRs.
+ #   - wip  # Auto-hold PRs with WIP in title
+  #  - yuks # Let prow tell a /joke
+
+external_plugins:
+  test-ci-bot:
+    - name: needs-rebase
+      events:
+        - pull_request
+
